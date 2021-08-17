@@ -21,18 +21,20 @@ class ImageDataset(Dataset):
         if len(self.files_A) > len(self.files_B):
             self.files_A, self.files_B = self.files_B, self.files_A
         self.new_perm()
+        self.mode = mode
         assert len(self.files_A) > 0, "Make sure you downloaded the horse2zebra images!"
 
     def new_perm(self):
         self.randperm = torch.randperm(len(self.files_B))[:len(self.files_A)]
 
     def __getitem__(self, index):
+
         item_A = self.transform(Image.open(self.files_A[index % len(self.files_A)]))
         item_B = self.transform(Image.open(self.files_B[self.randperm[index]]))
         if index == len(self) - 1:
             self.new_perm()
 
-        return (item_A - 0.5) * 2, (item_B - 0.5) * 2
+        return (item_A - 0.5) * 2, (item_B - 0.5) * 2,self.files_B[self.randperm[index]]
 
     def __len__(self):
         return min(len(self.files_A), len(self.files_B))
@@ -54,9 +56,9 @@ if __name__ == '__main__':
         num_workers=2
     )
 
-    monet, photo = iter(dataloader).next()
-    monet, photo = monet[0]/ 2 + 0.5 , photo[0]/2 + 0.5
-    monet, photo = monet.permute(1,2,0) , photo.permute(1,2,0)
+    monet, photo, _= iter(dataloader).next()
+    monet, photo, _ = monet[0]/ 2 + 0.5 , photo[0]/2 + 0.5 ,  _
+    monet, photo, _= monet.permute(1,2,0) , photo.permute(1,2,0) , _
     
     plot(monet,photo)
 

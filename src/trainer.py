@@ -1,4 +1,4 @@
-from dataset import ImageDataset
+from dataset import *
 from tqdm import tqdm
 import os
 import torch
@@ -8,6 +8,7 @@ from generator import *
 from utils import plot
 import torch.nn as nn
 from loss import *
+import cv2
 
 
 class Trainer:
@@ -38,7 +39,7 @@ class Trainer:
                 torch.nn.init.normal_(m.weight, 0.0, 0.02)
                 torch.nn.init.constant_(m.bias, 0)
         
-        if self.args.resume:
+        if 0:
             pre_dict = torch.load('checkpoint.pth')
             self.gen_AB.load_state_dict(pre_dict['gen_AB'])
             self.gen_BA.load_state_dict(pre_dict['gen_BA'])
@@ -49,12 +50,35 @@ class Trainer:
             self.disc_B.load_state_dict(pre_dict['disc_B'])
             self.disc_B_opt.load_state_dict(pre_dict['disc_B_opt'])
         else:
-            self.gen_AB = gen_AB.apply(weights_init)
-            self.gen_BA = gen_BA.apply(weights_init)
-            self.disc_A = disc_A.apply(weights_init)
-            self.disc_B = disc_B.apply(weights_init)
+            self.gen_AB = self.gen_AB.apply(weights_init)
+            self.gen_BA = self.gen_BA.apply(weights_init)
+            self.disc_A = self.disc_A.apply(weights_init)
+            self.disc_B = self.disc_B.apply(weights_init)
 
-    def train(save_model=True):
+    def test(self):
+        self.init_device()
+        self.init_model()
+        transform = transforms.Compose([
+            transforms.Resize(self.args.img_size),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+        ])
+
+        dataset = ImageDataset('../data/data.json',transform)
+
+        if not os.path.is_dir('../data/new_data'):
+            os.mkdir('../data/new_data')
+
+
+        dataloader = DataLoader(dataset, batch_size=1, num_workers=self.args.num_workers, shuffle=True)
+        for _,real_B, file_name in tqdm(dataloader):
+            with torch.no_grad():
+                fake_A = self.gen_BA(real_B)
+                cv2.imwrite(os.path.join('../data/new_data', file_name[0]), fake_A)
+
+        assert len(os.listdir('../data/new_data')) < 7000
+
+    def train(self,save_model=True):
 
         mean_generator_loss = 0
         mean_discriminator_loss = 0
@@ -75,12 +99,12 @@ class Trainer:
         adv_criterion = torch.nn.BCEWithLogitsLoss()
         recon_criterion = torch.nn.L1Loss()
 
-        for epoch in range(n_epochs):
-            for real_A, real_B in tqdm(dataloader):
+        for epoch in range(self.args.n_epochs):
+            for real_A, real_B, _ in tqdm(dataloader):
                 # image_width = image.shape[3]
                 cur_batch_size = len(real_A)
-                real_A = real_A.to(device)
-                real_B = real_B.to(device)
+                real_A = real_A.to(self.device)
+                real_B = real_B.to(self.device)
 
                 ### Update discriminator A ###
                 self.disc_A_opt.zero_grad() # Zero out the gradient before backpropagation
