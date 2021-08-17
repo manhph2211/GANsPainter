@@ -22,13 +22,14 @@ class Trainer:
             self.device = torch.device('cpu')
 
     def init_model(self):
-        self.gen_AB = Generator(dim_A, dim_B).to(device)
-        self.gen_BA = Generator(dim_B, dim_A).to(device)
-        self.gen_opt = torch.optim.Adam(list(gen_AB.parameters()) + list(gen_BA.parameters()), lr=self.args.lr, betas=(0.5, 0.999))
-        self.disc_A = Discriminator(dim_A).to(device)
-        self.disc_A_opt = torch.optim.Adam(disc_A.parameters(), lr=self.args.lr, betas=(0.5, 0.999))
-        self.disc_B = Discriminator(dim_B).to(device)
-        self.disc_B_opt = torch.optim.Adam(disc_B.parameters(), lr=self.args.lr, betas=(0.5, 0.999))
+        self.gen_AB = Generator(input_channels = 3, output_channels = 3).to(self.device)
+        self.gen_BA = Generator(output_channels =3, input_channels = 3).to(self.device)
+        self.gen_opt = torch.optim.Adam(list(self.gen_AB.parameters()) + list(self.gen_BA.parameters()), lr=self.args.lr, betas=(0.5, 0.999))
+
+        self.disc_A = Discriminator(input_channels = 3).to(self.device)
+        self.disc_A_opt = torch.optim.Adam(self.disc_A.parameters(), lr=self.args.lr, betas=(0.5, 0.999))
+        self.disc_B = Discriminator(input_channels = 3).to(self.device)
+        self.disc_B_opt = torch.optim.Adam(self.disc_B.parameters(), lr=self.args.lr, betas=(0.5, 0.999))
 
         def weights_init(m):
             if isinstance(m, nn.Conv2d) or isinstance(m, nn.ConvTranspose2d):
@@ -85,7 +86,7 @@ class Trainer:
                 self.disc_A_opt.zero_grad() # Zero out the gradient before backpropagation
                 with torch.no_grad():
                     fake_A = self.gen_BA(real_B)
-                disc_A_loss = self.get_disc_loss(real_A, fake_A, self.disc_A, adv_criterion)
+                disc_A_loss = get_disc_loss(real_A, fake_A, self.disc_A, adv_criterion)
                 disc_A_loss.backward(retain_graph=True) # Update gradients
                 self.disc_A_opt.step() # Update optimizer
 
@@ -93,14 +94,14 @@ class Trainer:
                 self.disc_B_opt.zero_grad() # Zero out the gradient before backpropagation
                 with torch.no_grad():
                     fake_B = self.gen_AB(real_A)
-                disc_B_loss = self.get_disc_loss(real_B, fake_B, self.disc_B, adv_criterion)
+                disc_B_loss = get_disc_loss(real_B, fake_B, self.disc_B, adv_criterion)
                 disc_B_loss.backward(retain_graph=True) # Update gradients
                 self.disc_B_opt.step() # Update optimizer
 
                 ### Update generator ###
                 self.gen_opt.zero_grad()
-                gen_loss, fake_A, fake_B = self.get_gen_loss(
-                    real_A, real_B, gen_AB, gen_BA, self.disc_A, self.disc_B, adv_criterion, recon_criterion, recon_criterion, lambda_identity=self.args.lambda_identity, lambda_cycle=self.args.lambda_cycle
+                gen_loss, fake_A, fake_B = get_gen_loss(
+                    real_A, real_B, self.gen_AB, self.gen_BA, self.disc_A, self.disc_B, adv_criterion, recon_criterion, recon_criterion, lambda_identity=self.args.lambda_identity, lambda_cycle=self.args.lambda_cycle
                 )
                 gen_loss.backward() # Update gradients
                 self.gen_opt.step() # Update optimizer
