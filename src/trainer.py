@@ -1,5 +1,5 @@
 from dataset import *
-from tqdm import tqdm
+from tqdm.notebook import tqdm
 import os
 import torch
 import numpy as np
@@ -18,9 +18,9 @@ class Trainer:
         
     def init_device(self):
         if torch.cuda.is_available():
-            self.device = torch.device('cuda')
+            self.device = 'cuda'
         else:
-            self.device = torch.device('cpu')
+            self.device = 'cpu'
 
     def init_model(self):
         self.gen_AB = Generator(input_channels = 3, output_channels = 3).to(self.device)
@@ -56,7 +56,6 @@ class Trainer:
             self.disc_B = self.disc_B.apply(weights_init)
 
     def test(self):
-        self.init_device()
         self.init_model()
         transform = transforms.Compose([
             transforms.Resize(self.args.img_size),
@@ -83,7 +82,6 @@ class Trainer:
         mean_generator_loss = 0
         mean_discriminator_loss = 0
 
-        self.init_device()
         self.init_model()
 
         transform = transforms.Compose([
@@ -138,8 +136,8 @@ class Trainer:
                 ### Visualization code ###
                 if cur_step % self.args.display_step == 0:
                     print(f"Epoch {epoch}: Step {cur_step}: Generator (U-Net) loss: {mean_generator_loss}, Discriminator loss: {mean_discriminator_loss}")
-                    plot(real_A, fake_A)
-                    plot(real_B, fake_B)
+                    plot(real_A[0].permute(1,2,0), fake_A[0].permute(1,2,0))
+                    # plot(real_B[0].permute(1,2,0), fake_B[0].permute(1,2,0))
                     mean_generator_loss = 0
                     mean_discriminator_loss = 0
                     # You can change save_model to True if you'd like to save the model

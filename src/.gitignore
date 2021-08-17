@@ -1,1 +1,4 @@
 *.pth
+
+generator.py
+discriminator.py
