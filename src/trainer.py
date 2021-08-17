@@ -38,7 +38,6 @@ class Trainer:
                 torch.nn.init.constant_(m.bias, 0)
         
         if self.args.resume:
-
             pre_dict = torch.load('checkpoint.pth')
             self.gen_AB.load_state_dict(pre_dict['gen_AB'])
             self.gen_BA.load_state_dict(pre_dict['gen_BA'])
@@ -54,11 +53,14 @@ class Trainer:
             self.disc_A = disc_A.apply(weights_init)
             self.disc_B = disc_B.apply(weights_init)
 
-
     def train(save_model=True):
 
         mean_generator_loss = 0
         mean_discriminator_loss = 0
+
+        self.init_device()
+        self.init_model()
+
         transform = transforms.Compose([
             transforms.Resize(self.args.img_size),
             transforms.RandomHorizontalFlip(),
@@ -69,51 +71,47 @@ class Trainer:
 
         dataloader = DataLoader(dataset, batch_size=self.args.batch_size, num_workers=self.args.num_workers, shuffle=True)
         cur_step = 0
-
-
+        adv_criterion = torch.nn.BCEWithLogitsLoss()
+        recon_criterion = torch.nn.L1Loss()
 
         for epoch in range(n_epochs):
-            # Dataloader returns the batches
-            # for image, _ in tqdm(dataloader):
             for real_A, real_B in tqdm(dataloader):
                 # image_width = image.shape[3]
-                real_A = nn.functional.interpolate(real_A, size=target_shape)
-                real_B = nn.functional.interpolate(real_B, size=target_shape)
                 cur_batch_size = len(real_A)
                 real_A = real_A.to(device)
                 real_B = real_B.to(device)
 
                 ### Update discriminator A ###
-                disc_A_opt.zero_grad() # Zero out the gradient before backpropagation
+                self.disc_A_opt.zero_grad() # Zero out the gradient before backpropagation
                 with torch.no_grad():
-                    fake_A = gen_BA(real_B)
-                disc_A_loss = get_disc_loss(real_A, fake_A, disc_A, adv_criterion)
+                    fake_A = self.gen_BA(real_B)
+                disc_A_loss = self.get_disc_loss(real_A, fake_A, self.disc_A, adv_criterion)
                 disc_A_loss.backward(retain_graph=True) # Update gradients
-                disc_A_opt.step() # Update optimizer
+                self.disc_A_opt.step() # Update optimizer
 
                 ### Update discriminator B ###
-                disc_B_opt.zero_grad() # Zero out the gradient before backpropagation
+                self.disc_B_opt.zero_grad() # Zero out the gradient before backpropagation
                 with torch.no_grad():
-                    fake_B = gen_AB(real_A)
-                disc_B_loss = get_disc_loss(real_B, fake_B, disc_B, adv_criterion)
+                    fake_B = self.gen_AB(real_A)
+                disc_B_loss = self.get_disc_loss(real_B, fake_B, self.disc_B, adv_criterion)
                 disc_B_loss.backward(retain_graph=True) # Update gradients
-                disc_B_opt.step() # Update optimizer
+                self.disc_B_opt.step() # Update optimizer
 
                 ### Update generator ###
-                gen_opt.zero_grad()
-                gen_loss, fake_A, fake_B = get_gen_loss(
-                    real_A, real_B, gen_AB, gen_BA, disc_A, disc_B, adv_criterion, recon_criterion, recon_criterion
+                self.gen_opt.zero_grad()
+                gen_loss, fake_A, fake_B = self.get_gen_loss(
+                    real_A, real_B, gen_AB, gen_BA, self.disc_A, self.disc_B, adv_criterion, recon_criterion, recon_criterion, lambda_identity=self.args.lambda_identity, lambda_cycle=self.args.lambda_cycle
                 )
                 gen_loss.backward() # Update gradients
-                gen_opt.step() # Update optimizer
+                self.gen_opt.step() # Update optimizer
 
                 # Keep track of the average discriminator loss
-                mean_discriminator_loss += disc_A_loss.item() / display_step
+                mean_discriminator_loss += disc_A_loss.item() / self.args.display_step
                 # Keep track of the average generator loss
-                mean_generator_loss += gen_loss.item() / display_step
+                mean_generator_loss += gen_loss.item() / self.args.display_step
 
                 ### Visualization code ###
-                if cur_step % display_step == 0:
+                if cur_step % self.args.display_step == 0:
                     print(f"Epoch {epoch}: Step {cur_step}: Generator (U-Net) loss: {mean_generator_loss}, Discriminator loss: {mean_discriminator_loss}")
                     plot(real_A, fake_A)
                     plot(real_B, fake_B)
@@ -122,12 +120,12 @@ class Trainer:
                     # You can change save_model to True if you'd like to save the model
                     if save_model:
                         torch.save({
-                            'gen_AB': gen_AB.state_dict(),
-                            'gen_BA': gen_BA.state_dict(),
-                            'gen_opt': gen_opt.state_dict(),
-                            'disc_A': disc_A.state_dict(),
-                            'disc_A_opt': disc_A_opt.state_dict(),
-                            'disc_B': disc_B.state_dict(),
-                            'disc_B_opt': disc_B_opt.state_dict()
-                        }, f"cycleGAN_{cur_step}.pth")
+                            'gen_AB': self.gen_AB.state_dict(),
+                            'gen_BA': self.gen_BA.state_dict(),
+                            'gen_opt': self.gen_opt.state_dict(),
+                            'disc_A': self.disc_A.state_dict(),
+                            'disc_A_opt': self.disc_A_opt.state_dict(),
+                            'disc_B': self.disc_B.state_dict(),
+                            'disc_B_opt': self.disc_B_opt.state_dict()
+                        }, f"checkpoint.pth")
                 cur_step += 1

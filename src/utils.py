@@ -6,6 +6,7 @@ import random
 import json 
 from sklearn import model_selection
 
+
 def plot(test_monet_img,test_photo_img):
 	assert test_monet_img.shape == test_photo_img.shape
 	try:
