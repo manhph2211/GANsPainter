@@ -42,14 +42,14 @@ python train.py --batch_size [your option] --resume [your option] --epochs [your
 
 - In the very first steps of training ... I got
 
-![]('')
+![](https://github.com/manhph2211/GANsPainter/blob/main/images/first_steps.png)
 
 - This one after some epochs:
 
-![]('')
+![](https://github.com/manhph2211/GANsPainter/blob/main/images/2_epoch.png)
 
 - The final image(right):
 
-![]('')
+![](https://github.com/manhph2211/GANsPainter/blob/main/images/m_epoch.png)
 
 Well, I'm not gonna be the next Monet :)
