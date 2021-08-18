@@ -39,17 +39,12 @@ class Trainer:
                 torch.nn.init.normal_(m.weight, 0.0, 0.02)
                 torch.nn.init.constant_(m.bias, 0)
         
-        if self.args.resume:
-            pre_dict = torch.load('checkpoint.pth')
-            self.gen_AB.load_state_dict(pre_dict['gen_AB'])
-            self.gen_BA.load_state_dict(pre_dict['gen_BA'])
-            self.gen_opt.load_state_dict(pre_dict['gen_opt'])
-
-            self.disc_A.load_state_dict(pre_dict['disc_A'])
-            self.disc_A_opt.load_state_dict(pre_dict['disc_A_opt'])
-            self.disc_B.load_state_dict(pre_dict['disc_B'])
-            self.disc_B_opt.load_state_dict(pre_dict['disc_B_opt'])
-        else:
+        try:
+            self.gen_AB.load_state_dict(torch.load('../weights/gen_AB.pth',map_location=self.device))
+            self.gen_BA.load_state_dict(torch.load('../weights/gen_BA.pth',map_location=self.device))
+            self.disc_A.load_state_dict(torch.load('../weights/disc_A.pth',map_location=self.device))
+            self.disc_B.load_state_dict(torch.load('../weights/disc_B.pth',map_location=self.device))
+        except:
             self.gen_AB = self.gen_AB.apply(weights_init)
             self.gen_BA = self.gen_BA.apply(weights_init)
             self.disc_A = self.disc_A.apply(weights_init)
@@ -63,16 +58,14 @@ class Trainer:
             transforms.ToTensor(),
         ])
 
-
         if not os.path.isdir('../data/new_data'):
             os.mkdir('../data/new_data')
-
 
         for file in tqdm(glob.glob('../data/photo_jpg/*.jpg')):
             with torch.no_grad():
                 real_B = transform(Image.open(file))
-                fake_A = self.gen_BA(torch.unsqueeze(real_B, 0))
-                fake_A = 255*(fake_A[0].cpu().numpy() /2 + 0.5)
+                fake_A = self.gen_BA(torch.unsqueeze(real_B, 0).to(self.device))
+                fake_A = 255*(fake_A[0].permute(1,2,0).cpu().numpy() /2 + 0.5)
                 cv2.imwrite(os.path.join('../data/new_data', file.split('/')[-1]), fake_A)
 
         assert len(os.listdir('../data/new_data')) >= 7000
@@ -98,7 +91,7 @@ class Trainer:
         recon_criterion = torch.nn.L1Loss()
 
         for epoch in range(self.args.n_epochs):
-            for real_A, real_B in tqdm(dataloader):
+            for real_A, real_B, _ in tqdm(dataloader):
                 # image_width = image.shape[3]
                 cur_batch_size = len(real_A)
                 real_A = real_A.to(self.device)
@@ -136,19 +129,14 @@ class Trainer:
                 ### Visualization code ###
                 if cur_step % self.args.display_step == 0:
                     print(f"Epoch {epoch}: Step {cur_step}: Generator (U-Net) loss: {mean_generator_loss}, Discriminator loss: {mean_discriminator_loss}")
-                    plot(real_A[0].permute(1,2,0), fake_A[0].permute(1,2,0))
-                    # plot(real_B[0].permute(1,2,0), fake_B[0].permute(1,2,0))
+                    # plot(real_A[0].permute(1,2,0) / 2 + 0.5, fake_B[0].permute(1,2,0) / 2 + 0.5)
+                    plot(real_B[0].permute(1,2,0)/2 + 0.5, fake_A[0].permute(1,2,0)/2 + 0.5)
                     mean_generator_loss = 0
                     mean_discriminator_loss = 0
                     # You can change save_model to True if you'd like to save the model
                     if save_model:
-                        torch.save({
-                            'gen_AB': self.gen_AB.state_dict(),
-                            'gen_BA': self.gen_BA.state_dict(),
-                            'gen_opt': self.gen_opt.state_dict(),
-                            'disc_A': self.disc_A.state_dict(),
-                            'disc_A_opt': self.disc_A_opt.state_dict(),
-                            'disc_B': self.disc_B.state_dict(),
-                            'disc_B_opt': self.disc_B_opt.state_dict()
-                        }, f"checkpoint.pth")
+                        torch.save(self.gen_AB.state_dict(), '../weights/gen_AB.pth')
+                        torch.save(self.gen_BA.state_dict(), '../weights/gen_BA.pth')
+                        torch.save(self.disc_A.state_dict(), '../weights/disc_A.pth')
+                        torch.save(self.disc_B.state_dict(), '../weights/disc_B.pth')
                 cur_step += 1

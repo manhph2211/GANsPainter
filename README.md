@@ -7,6 +7,9 @@ In this project, I tried to implement CycleGANs to generate images in the style 
 
 - Dataset can be found at [data](https://www.kaggle.com/c/gan-getting-started/overview). This is a kaggle competition and it hasn't finished yet at the time I push these code.
 
+- Save `monet_jpg` and `photo_jpg` in `./data`
+
+
 # 2. Dependencies
 
 - You should create a virtual environment and then run `pip install -r requirements.txt` 
@@ -23,10 +26,30 @@ In this project, I tried to implement CycleGANs to generate images in the style 
 
 # 3. Usage
 
-- If you want to use my pre-trained model, download [this](...) and put it int `./src`
-- Use this command: 
+- If you want to use my pre-trained model, download [this](https://drive.google.com/drive/folders/1H_Kpp1tpNS8C2XsKln6bKJiUij1yEWxR?usp=sharing) and put it into `./weights`
 
-```python train.py --batch_size [your option] --resume [your option] --epochs [your option] --lr [your option] # set resume True if using pretrained!!```
+- Use these command: 
+
+```
+
+python utils.py
+
+python train.py --batch_size [your option] --resume [your option] --epochs [your option] --lr [your option] # set resume True if using pretrained!!
+
+```
 
 # 4. Results 
 
+- In the very first steps of training ... I got
+
+![]('')
+
+- This one after some epochs:
+
+![]('')
+
+- The final image(right):
+
+![]('')
+
+Well, I'm not gonna be the next Monet :)
