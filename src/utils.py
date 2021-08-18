@@ -16,13 +16,12 @@ def plot(test_monet_img,test_photo_img):
 	plt.subplot(1,2,1)
 	plt.imshow(test_monet_img)
 	plt.axis("off")
-	plt.title("Monet image")
+	plt.title("Real Monet image")
 	plt.subplot(1,2,2)
 	plt.imshow(test_photo_img)
 	plt.axis("off")
-	plt.title("Normal image")
+	plt.title("Not Monet image")
 	plt.show()
-	cv2.waitKey(0)
 
 
 def read_json(file):

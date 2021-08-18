@@ -39,7 +39,7 @@ class Trainer:
                 torch.nn.init.normal_(m.weight, 0.0, 0.02)
                 torch.nn.init.constant_(m.bias, 0)
         
-        if 0:
+        if self.args.resume:
             pre_dict = torch.load('checkpoint.pth')
             self.gen_AB.load_state_dict(pre_dict['gen_AB'])
             self.gen_BA.load_state_dict(pre_dict['gen_BA'])
@@ -63,19 +63,19 @@ class Trainer:
             transforms.ToTensor(),
         ])
 
-        dataset = ImageDataset('../data/data.json',transform)
 
-        if not os.path.is_dir('../data/new_data'):
+        if not os.path.isdir('../data/new_data'):
             os.mkdir('../data/new_data')
 
 
-        dataloader = DataLoader(dataset, batch_size=1, num_workers=self.args.num_workers, shuffle=True)
-        for _,real_B, file_name in tqdm(dataloader):
+        for file in tqdm(glob.glob('../data/photo_jpg/*.jpg')):
             with torch.no_grad():
-                fake_A = self.gen_BA(real_B)
-                cv2.imwrite(os.path.join('../data/new_data', file_name[0]), fake_A)
+                real_B = transform(Image.open(file))
+                fake_A = self.gen_BA(torch.unsqueeze(real_B, 0))
+                fake_A = 255*(fake_A[0].cpu().numpy() /2 + 0.5)
+                cv2.imwrite(os.path.join('../data/new_data', file.split('/')[-1]), fake_A)
 
-        assert len(os.listdir('../data/new_data')) < 7000
+        assert len(os.listdir('../data/new_data')) >= 7000
 
     def train(self,save_model=True):
 
@@ -98,7 +98,7 @@ class Trainer:
         recon_criterion = torch.nn.L1Loss()
 
         for epoch in range(self.args.n_epochs):
-            for real_A, real_B, _ in tqdm(dataloader):
+            for real_A, real_B in tqdm(dataloader):
                 # image_width = image.shape[3]
                 cur_batch_size = len(real_A)
                 real_A = real_A.to(self.device)

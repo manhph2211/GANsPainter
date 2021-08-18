@@ -34,7 +34,7 @@ class ImageDataset(Dataset):
         if index == len(self) - 1:
             self.new_perm()
 
-        return (item_A - 0.5) * 2, (item_B - 0.5) * 2,self.files_B[self.randperm[index]]
+        return (item_A - 0.5) * 2, (item_B - 0.5) * 2
 
     def __len__(self):
         return min(len(self.files_A), len(self.files_B))
@@ -56,9 +56,9 @@ if __name__ == '__main__':
         num_workers=2
     )
 
-    monet, photo, _= iter(dataloader).next()
-    monet, photo, _ = monet[0]/ 2 + 0.5 , photo[0]/2 + 0.5 ,  _
-    monet, photo, _= monet.permute(1,2,0) , photo.permute(1,2,0) , _
+    monet, photo = iter(dataloader).next()
+    monet, photo = monet[0]/ 2 + 0.5 , photo[0]/2 + 0.5 
+    monet, photo = monet.permute(1,2,0) , photo.permute(1,2,0) 
     
     plot(monet,photo)
 

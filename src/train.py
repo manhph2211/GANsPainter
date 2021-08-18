@@ -2,7 +2,7 @@ import argparse
 from trainer import Trainer 
 
 
-def main():
+def main(mode = 'train'):
     parser = argparse.ArgumentParser(description='Painting ...')
     parser.add_argument('--batch_size', type=int, help='Batch size for training')
     parser.add_argument('--resume', type=bool, default = False, help='Resume from checkpoint')
@@ -15,7 +15,10 @@ def main():
     parser.add_argument('--lambda_cycle', type = float, default = 10.0, help='the weight of the cycle-consistency loss')
     args = parser.parse_args()
     trainer = Trainer(args)
-    trainer.train()
+    if mode == 'train':
+      trainer.train()
+    elif mode == 'test':
+      trainer.test()
 
 if __name__ == '__main__':
     main()
